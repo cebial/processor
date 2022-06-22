@@ -1,74 +1,75 @@
 package processor
 
-class Processor {
-    private var doingDouble = false
+class Matrix(private val rows: Int, private val cols: Int, fromCli: Boolean = false) {
+    private val matrix: List<MutableList<Double>>
 
-    inner class Matrix {
-        private var matrix: List<List<Double>>
-        val rows: Int get() = matrix.size
-        val cols: Int get() = matrix[0].size
-
-        constructor(rows: Double) {
-            matrix = List(rows.toInt()) { readln().also { doingDouble = '.' in it }.split(" ").map { it.toDouble() } }
-        }
-
-        constructor(rows: Int, cols: Int) {
-            matrix = List(rows) { MutableList(cols){ 0.0 } }
-        }
-
-        operator fun get(row: Int, col: Int) = matrix[row][col]
-        fun isEqualSize(other: Matrix) = rows == other.rows && cols == other.cols
-        fun canCompose(other: Matrix) = cols == other.rows
-        fun printTransformed(doThis: (x: Int, y: Int) -> Number) {
-            println("The result is:")
-            for (y in 0 until rows) {
-                for (x in 0 until cols) {
-                    print("${if (doingDouble) doThis(x, y) else doThis(x, y).toInt()} ")
-                }
-                println()
-            }
-        }
+    init {
+        matrix = if (!fromCli) List(rows) { MutableList(cols) { 0.0 } }
+        else List(rows) { readln().split(" ").map { it.toDouble() }.toMutableList() }
     }
 
+    operator fun get(row: Int, col: Int) = matrix[row][col]
+    operator fun set(row: Int, col: Int, value: Double) = matrix[row].set(col, value)
+    override fun toString() = matrix.joinToString("\n") { it.joinToString(" ") }
+
+    fun isEqualSize(other: Matrix) = rows == other.rows && cols == other.cols
+    fun canCompose(other: Matrix) = cols == other.rows
+
+    operator fun plus(other: Matrix) = transform { x, y -> this[y, x] + other[y, x] }
+    operator fun times(multiplier: Int) = transform { x, y -> multiplier * this[y, x] }
+    operator fun times(other: Matrix): Matrix {
+        val newMatrix = Matrix(rows, other.cols)
+        for (row in 0 until rows)
+            for (col in 0 until other.cols)
+                for (i in 0 until cols)
+                    newMatrix[row, col] += this[row, i] * other[i, col]
+
+        return newMatrix
+    }
+
+    private fun transform(operate: (x: Int, y: Int) -> Double): Matrix {
+        val newMatrix = Matrix(rows, cols)
+        for (row in 0 until rows)
+            for (col in 0 until cols)
+                newMatrix[row, col] = operate(col, row)
+
+        return newMatrix
+    }
+ }
+
+class Processor {
+    private fun printResult(matrix: Matrix, msg: String = "The result is:") = println("$msg\n$matrix")
+
     private fun readTwoMatrices() = readMatrix("first ") to readMatrix("second ")
-    private fun readMatrix(prefix: String = "") : Matrix {
+    private fun readMatrix(prefix: String = ""): Matrix {
         print("Enter size of ${prefix}matrix:")
-        val rows = readln().split(" ").map { it.toDouble() }[0]
+        val (rows, cols) = readln().split(" ").map { it.toInt() }
 
         println("Enter ${prefix}matrix:")
-        return Matrix(rows)
+        return Matrix(rows, cols, true)
     }
 
     private fun addMatrices() {
         val (matrix1, matrix2) = readTwoMatrices()
-        if (!matrix1.isEqualSize(matrix2)) { println("The operation cannot be performed."); return }
+        if (!matrix1.isEqualSize(matrix2)) error("The operation cannot be performed.")
 
-        matrix1.printTransformed { x, y -> matrix1[y, x] + matrix2[y, x] }
+        printResult(matrix1 + matrix2)
     }
+
     private fun scaleMatrix() {
         val matrix = readMatrix()
 
         print("Enter constant:")
         val multiplier = readln().toInt()
 
-        matrix.printTransformed { x, y -> multiplier * matrix[y, x] }
+        printResult(matrix * multiplier)
     }
 
     private fun composeMatrices() {
         val (matrix1, matrix2) = readTwoMatrices()
-        if (!matrix1.canCompose(matrix2)) { println("The operation cannot be performed."); return }
+        if (!matrix1.canCompose(matrix2)) error("The operation cannot be performed.")
 
-        println("The result is:")
-        for (y in 0 until matrix1.rows) {
-            for (x in 0 until matrix2.cols) {
-                var product = 0.0
-                for (t in 0 until matrix1.cols) {
-                    product += matrix1[y, t] * matrix2[t, x]
-                }
-                print("${if (doingDouble) product else product.toInt()} ")
-            }
-            println()
-        }   
+        printResult(matrix1 * matrix2)
     }
 
     private fun showMenu() = print(
