@@ -10,7 +10,21 @@ class Matrix(private val rows: Int, private val cols: Int, fromCli: Boolean = fa
 
     operator fun get(row: Int, col: Int) = matrix[row][col]
     operator fun set(row: Int, col: Int, value: Double) = matrix[row].set(col, value)
+    override fun toString() = matrix.joinToString("\n") { it.joinToString(" ") }
 
+    private fun transform(action: (x: Int, y: Int) -> Double): Matrix {
+        val newMatrix = Matrix(rows, cols)
+        for (row in 0 until rows)
+            for (col in 0 until cols)
+                newMatrix[row, col] = action(col, row)
+
+        return newMatrix
+    }
+
+    fun transposeMain() = transform { x, y -> this[x, y] }
+    fun transposeSide() = transform { x, y -> this[cols - 1 - x, rows - 1 - y] }
+    fun transposeVertical() = transform { x, y -> this[y, cols - 1 - x] }
+    fun transposeHorizontal() = transform { x, y -> this[rows - 1 - y, x] }
     operator fun times(multiplier: Int) = transform { x, y -> multiplier * this[y, x] }
     operator fun plus(other: Matrix): Matrix {
         if (rows != other.rows || cols != other.cols) error("The operation cannot be performed.")
@@ -28,20 +42,6 @@ class Matrix(private val rows: Int, private val cols: Int, fromCli: Boolean = fa
         return newMatrix
     }
 
-    fun transposeMain() = transform { x, y -> this[x, y] }
-    fun transposeSide() = transform { x, y -> this[cols - 1 - x, rows - 1 - y] }
-    fun transposeVertical() = transform { x, y -> this[y, cols - 1 - x] }
-    fun transposeHorizontal() = transform { x, y -> this[rows - 1 - y, x] }
-
-    private fun transform(action: (x: Int, y: Int) -> Double): Matrix {
-        val newMatrix = Matrix(rows, cols)
-        for (row in 0 until rows)
-            for (col in 0 until cols)
-                newMatrix[row, col] = action(col, row)
-
-        return newMatrix
-    }
-
     fun getDeterminant(m: List<MutableList<Double>> = matrix): Double {
         if (m.size == 2) return m[0][0] * m[1][1] - m[0][1] * m[1][0]
 
@@ -54,8 +54,6 @@ class Matrix(private val rows: Int, private val cols: Int, fromCli: Boolean = fa
         }
         return result
     }
-
-    override fun toString() = matrix.joinToString("\n") { it.joinToString(" ") }
 }
 
 class Processor {
